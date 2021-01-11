@@ -77,8 +77,13 @@ def generate_gst_reco():
     if os.path.exists(accounts_file_path):
         accounts_wb=op.load_workbook(accounts_file_path)
         accounts_df=pd.DataFrame(accounts_wb.active.values)
-        accounts_df.columns=accounts_df.iloc[2]
-        accounts_df=accounts_df[3:-1]
+        accounts_df.columns=accounts_df.iloc[4]
+        accounts_df=accounts_df[5:-3]
+        mask = accounts_df.applymap(lambda x: x is None)
+        cols = accounts_df.columns[(mask).any()]
+        for col in accounts_df[cols]:
+            accounts_df.loc[mask[col], col] = ' '
+        accounts_df["PartyGSTIN"]= accounts_df["PartyGSTIN"].str.strip()
     else:
         print("Accounts file missing")
 
@@ -86,34 +91,34 @@ def generate_gst_reco():
     if os.path.exists(gstr_file_path):
         gstr_wb=op.load_workbook(gstr_file_path)
         gstr_df=pd.DataFrame(gstr_wb.active.values)
-        gstr_df.columns=["GSTIN of supplier","Trade/Legal name","Invoice number","Invoice type","Invoice Date",	"Invoice Value","Place of supply",
-            "Supply Attract Reverse Charge","Rate","Taxable Value","Integrated Tax","Central Tax","State/UT Tax","Cess",
-            "GSTR-1/5 Period","GSTR-1/5 Filing Date","ITC Availability","Reason","Applicable Tax Rate","Source","IRN","IRN Date"]
-        gstr_df=gstr_df[6:]
+        gstr_df.columns=["GSTIN of supplier","Trade/Legal name","Invoice number","Invoice Date","Invoice Value",
+        "Taxable Value","Integrated Tax","Central Tax","State/UT Tax","Rate(%)","GSTR-1/5 Period","GSTR-1/5 Filing Date",
+        "ITC Availability","Place of supply","Supply Attract Reverse Charge","Reason","Applicable percentage of Tax Rate","Source",
+        "IRN","IRN Date"]
+        gstr_df=gstr_df[1:]
+        mask = gstr_df.applymap(lambda x: x is None)
+        cols = gstr_df.columns[(mask).any()]
+        for col in gstr_df[cols]:
+            gstr_df.loc[mask[col], col] = ' '
     else:
         print("GSTR file missing")
 
     company_gst_master=dict()
 
     for index, row in accounts_df.iterrows():
-        company_gst_master[row['Sales Tax No.']]=row['Particulars']
+        company_gst_master[row['PartyGSTIN'].strip()]=row['Party Account']
 
     cwd=os.getcwd()
-    reco_file_one_path=os.path.join(cwd,"temp","gst_reco_completed.csv")
     reco_file_two_path=os.path.join(cwd,"temp","gst_reco.csv")
 
-    if os.path.exists(reco_file_one_path) and os.path.exists(reco_file_two_path):
-        os.remove(reco_file_one_path)
-        os.remove(reco_file_two_path)
-
+    pd.DataFrame({}).to_csv(reco_file_two_path)
+    
     for key,value in company_gst_master.items():
-        
         company_df=pd.DataFrame([key,value]).transpose()
-        account_temp_df=accounts_df.loc[accounts_df['Sales Tax No.'] == key]
+        account_temp_df=accounts_df.loc[accounts_df['PartyGSTIN'] == key]
         acc_df=pd.DataFrame(columns=["Source","Date","Narration","Gross Total"])
-        
         for index,row in account_temp_df.iterrows():       
-            temp_df = {"Source": "Books", 'Date': row["Date"],"Narration":row["Narration"][8:].strip(),"Gross Total":row["Gross Total"]}
+            temp_df = {"Source": "Books", 'Date': row["Date"],"Narration":row["Supplier Bill No"].strip(),"Gross Total":row["Total Value"]}
             acc_df=acc_df.append(temp_df,ignore_index=True)
 
         gstr_temp_df=gstr_df.loc[gstr_df['GSTIN of supplier']==key]
@@ -124,16 +129,9 @@ def generate_gst_reco():
             gst_df=gst_df.append(temp_df,ignore_index=True)
         
         acc_gst_merge=pd.merge(acc_df,gst_df,left_on="Narration",right_on="Invoice number",how="outer")
-
-        if acc_gst_merge["Source"].isnull().values.any() or acc_gst_merge["GST Source"].isnull().values.any(): 
-            company_df.to_csv(reco_file_two_path, mode='a',header=False,index=False)
-            acc_gst_merge.to_csv(reco_file_two_path, mode='a',index=False) 
-        else:
-            company_df.to_csv(reco_file_one_path, mode='a',header=False,index=False)
-            acc_gst_merge.to_csv(reco_file_one_path, mode='a',index=False)
-
-
-    os.startfile(reco_file_one_path)
+        company_df.to_csv(reco_file_two_path, mode='a',header=False,index=False)
+        acc_gst_merge.to_csv(reco_file_two_path, mode='a',index=False)
+    
     os.startfile(reco_file_two_path)
 
 
