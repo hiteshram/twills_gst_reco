@@ -1,7 +1,6 @@
 import openpyxl as op
 import os
 import pandas as pd
-import xlrd
 import shutil
 from tkinter import *
 from tkinter import filedialog
@@ -116,16 +115,16 @@ def generate_gst_reco():
     for key,value in company_gst_master.items():
         company_df=pd.DataFrame([key,value]).transpose()
         account_temp_df=accounts_df.loc[accounts_df['PartyGSTIN'] == key]
-        acc_df=pd.DataFrame(columns=["Source","Date","Narration","Gross Total"])
+        acc_df=pd.DataFrame(columns=["Source","Date","Narration","Taxable Value"])
         for index,row in account_temp_df.iterrows():       
-            temp_df = {"Source": "Books", 'Date': row["Date"],"Narration":row["Supplier Bill No"].strip(),"Gross Total":row["Total Value"]}
+            temp_df = {"Source": "Books", 'Date': row["Date"],"Narration":row["Supplier Bill No"].strip(),"Taxable Value":round(float(row["Taxable Value"]),2)}
             acc_df=acc_df.append(temp_df,ignore_index=True)
 
         gstr_temp_df=gstr_df.loc[gstr_df['GSTIN of supplier']==key]
-        gst_df=pd.DataFrame(columns=["GST Source","Invoice Date","Invoice number","Invoice Value"])
+        gst_df=pd.DataFrame(columns=["GST Source","Invoice Date","Invoice number","Taxable Value"])
         for index,row in gstr_temp_df.iterrows():
             row["Invoice number"]=row["Invoice number"].strip()
-            temp_df={"GST Source":"GSTR2B Input","Invoice Date":row["Invoice Date"],"Invoice number":row["Invoice number"],"Invoice Value":row["Invoice Value"]}
+            temp_df={"GST Source":"GSTR2B Input","Invoice Date":row["Invoice Date"],"Invoice number":row["Invoice number"],"Taxable Value":round(float(row["Taxable Value"]),2)}
             gst_df=gst_df.append(temp_df,ignore_index=True)
         
         acc_gst_merge=pd.merge(acc_df,gst_df,left_on="Narration",right_on="Invoice number",how="outer")
