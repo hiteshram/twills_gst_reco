@@ -121,10 +121,11 @@ def generate_gst_reco():
             acc_df=acc_df.append(temp_df,ignore_index=True)
 
         gstr_temp_df=gstr_df.loc[gstr_df['GSTIN of supplier']==key]
-        gst_df=pd.DataFrame(columns=["GST Source","Invoice Date","Invoice number","Taxable Value"])
+        gst_df=pd.DataFrame(columns=["GST Source","Invoice Date","Invoice number","Taxable Value","IGST","CGST","SGST","Rate(%)","Invoice Value"])
         for index,row in gstr_temp_df.iterrows():
             row["Invoice number"]=row["Invoice number"].strip()
-            temp_df={"GST Source":"GSTR2B Input","Invoice Date":row["Invoice Date"],"Invoice number":row["Invoice number"],"Taxable Value":round(float(row["Taxable Value"]),2)}
+            temp_df={"GST Source":"GSTR2B Input","Invoice Date":row["Invoice Date"],"Invoice number":row["Invoice number"],"Taxable Value":round(float(row["Taxable Value"]),2),
+                     "IGST":row["Integrated Tax"],"CGST":row["Central Tax"],"SGST":row["State/UT Tax"],"Rate(%)":row["Rate(%)"],"Invoice Value":row["Invoice Value"]}
             gst_df=gst_df.append(temp_df,ignore_index=True)
         
         acc_gst_merge=pd.merge(acc_df,gst_df,left_on="Narration",right_on="Invoice number",how="outer")
